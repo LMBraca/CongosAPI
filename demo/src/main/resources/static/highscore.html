@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400&500&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highscore</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="highscore-container container">
+    <div class="logo">
+        <img src="logo.png" alt="Logo">
+    </div>
+    <h1>Welcome, <span id="username"></span>!</h1>
+    <h2>Your Highscore: <span id="personal-highscore"></span></h2>
+    <p id="no-highscore-message" style="display: none;">You don't have a highscore yet!</p>
+    <h2>Leaderboard</h2>
+    <table id="leaderboard">
+        <thead>
+        <tr>
+            <th>Username</th>
+            <th>Highscore (Time)</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const username = sessionStorage.getItem('username');
+        if (!username) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        document.getElementById('username').textContent = username;
+
+        const personalResponse = await fetch(`http://localhost:4445/user/${username}/highscore`);
+        const personalHighscore = await personalResponse.text();
+        const personalHighscoreElement = document.getElementById('personal-highscore');
+
+        if (!personalHighscore.trim()) {
+            document.getElementById('no-highscore-message').style.display = 'block';
+            personalHighscoreElement.style.display = 'none';
+        } else {
+            personalHighscoreElement.textContent = personalHighscore;
+        }
+
+        const allUsersResponse = await fetch('http://localhost:4445/user/all');
+        const allUsers = await allUsersResponse.json();
+
+        const leaderboard = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+        leaderboard.innerHTML = '';
+
+        allUsers
+            .filter(user => user.highScore !== null && user.highScore !== undefined && user.highScore.trim() !== "")
+            .sort((a, b) => convertToMilliseconds(a.highScore) - convertToMilliseconds(b.highScore))
+            .forEach(user => {
+                const row = leaderboard.insertRow();
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                cell1.textContent = user.username;
+                cell2.textContent = user.highScore;
+            });
+
+        function convertToMilliseconds(time) {
+            const parts = time.split(/[:.]/);
+            const minutes = parseInt(parts[0], 10) * 60 * 1000;
+            const seconds = parseInt(parts[1], 10) * 1000;
+            const milliseconds = parseInt(parts[2], 10);
+            return minutes + seconds + milliseconds;
+        }
+    });
+</script>
+</body>
+</html>
